@@ -11,67 +11,98 @@ import astropy.units as u
 import streamlit as st
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import concurrent.futures
 
-import concurrent.futures  # Import for parallelization
-
-# Mapping from user-friendly body names to the actual strings recognized by Astropy's get_body() function.
 BODY_MAP = {
-    "Mercury": "mercury",
-    "Venus": "venus",
-    "Mars": "mars",
-    "Jupiter": "jupiter",
-    "Saturn": "saturn",
-    "Uranus": "uranus",
-    "Neptune": "neptune",
-    "Moon": "moon",
+    "mercury": "mercury",
+    "venus": "venus",
+    "mars": "mars",
+    "jupiter": "jupiter",
+    "saturn": "saturn",
+    "uranus": "uranus",
+    "neptune": "neptune",
+    "moon": "moon",
 }
 
+TRANSLATIONS = {
+    "en": {
+        "title": "Planetary Alignment",
+        "settings": "Settings",
+        "select": "Select",
+        "select_bodies": "Which objects do you want to check for alignment?",
+        "alignment_method": "Alignment Detection Method",
+        "pairwise_separation": "Maximum pairwise separation",
+        "longitude_range": "Longitude range only",
+        "alignment_threshold": "Alignment Threshold (degrees)",
+        "max_pairwise_separation": "Max separation (degrees)",
+        "location": "Observer Location",
+        "latitude": "Latitude (degrees)",
+        "longitude": "Longitude (degrees)",
+        "date_range": "Date Range to Search",
+        "start_date": "Start date",
+        "end_year": "End year",
+        "step_size_hours": "Time step (hours)",
+        "check_visibility": "Check visibility at location",
+        "min_altitude": "Minimum altitude (degrees)",
+        "search_button": "Search for Alignment",
+        "no_alignment_found": "No alignment found within the specified date range.",
+        "alignment_found": "Alignment found: {}",
+        "local_sky_positions": "Local Sky Positions (Alt-Az)",
+        "bodies_warning": "Please select at least one celestial body to check for alignment.",
+    },
+    "pt": {
+        "title": "Alinhamento Planetário",
+        "settings": "Configurações",
+        "select": "Selecione",
+        "select_bodies": "Quais objetos você deseja verificar para alinhamento?",
+        "alignment_method": "Método de detecção",
+        "pairwise_separation": "Separação máxima entre pares",
+        "longitude_range": "Apenas variação de longitude",
+        "alignment_threshold": "Limite de alinhamento (graus)",
+        "max_pairwise_separation": "Separação máxima (graus)",
+        "location": "Localização do Observador",
+        "latitude": "Latitude (graus)",
+        "longitude": "Longitude (graus)",
+        "date_range": "Faixa de Datas para Pesquisar",
+        "start_date": "Data de início",
+        "end_year": "Ano de término",
+        "step_size_hours": "Intervalo temporal (horas)",
+        "check_visibility": "Verificar visibilidade no local",
+        "min_altitude": "Altura mínima (graus)",
+        "search_button": "Pesquisar por Alinhamento",
+        "no_alignment_found": "Nenhum alinhamento encontrado dentro da faixa de datas especificada.",
+        "alignment_found": "Alinhamento encontrado: {}",
+        "local_sky_positions": "Posições no Céu Local (Alt-Az)",
+        "bodies_warning": "Nenhum corpo selecionado. Por favor, selecione pelo menos um.",
+    },
+}
+
+
 def get_ecliptic_positions(bodies, date):
-    """
-    For each entry in 'bodies', compute its geocentric ecliptic longitude and latitude
-    at the specified date/time (a datetime.datetime object).
-
-    Returns a dict: { body_name: {"lon": <float>, "lat": <float>} }
-    """
     time = Time(date)
-    # we can use a JPL ephemeris that includes outer planets
-    solar_system_ephemeris.set('de432s')  # Em vez de 'de432s'
-
+    solar_system_ephemeris.set("de432s")
     ecliptic_positions = {}
     for body in bodies:
-        # Get the sky coordinates for the body
         coord = get_body(body, time)
-        # Transform to geocentric true ecliptic coordinates
         eclip_coord = coord.transform_to(GeocentricTrueEcliptic(equinox=time))
         ecliptic_positions[body] = {
             "lon": float(eclip_coord.lon.deg),
             "lat": float(eclip_coord.lat.deg),
         }
-
     return ecliptic_positions
 
+
 def ecliptic_separation(lon1, lat1, lon2, lat2):
-    """
-    Compute spherical angular separation in degrees for two objects
-    given their ecliptic coordinates (lon, lat in degrees).
-    """
-    # Convert to radians
     lon1_rad, lat1_rad = np.radians([lon1, lat1])
     lon2_rad, lat2_rad = np.radians([lon2, lat2])
-
-    # Great-circle separation formula
-    cos_sep = (
-        np.sin(lat1_rad) * np.sin(lat2_rad)
-        + np.cos(lat1_rad) * np.cos(lat2_rad) * np.cos(lon1_rad - lon2_rad)
-    )
-    cos_sep = np.clip(cos_sep, -1.0, 1.0)  # numerical safety
+    cos_sep = np.sin(lat1_rad) * np.sin(lat2_rad) + np.cos(lat1_rad) * np.cos(
+        lat2_rad
+    ) * np.cos(lon1_rad - lon2_rad)
+    cos_sep = np.clip(cos_sep, -1.0, 1.0)
     return np.degrees(np.arccos(cos_sep))
 
+
 def calculate_ecliptic_separations(ecliptic_positions):
-    """
-    Returns a list of pairwise (body1, body2, separation_degs)
-    for all bodies in 'ecliptic_positions'.
-    """
     bodies = list(ecliptic_positions.keys())
     pairs = []
     for i in range(len(bodies)):
@@ -83,29 +114,22 @@ def calculate_ecliptic_separations(ecliptic_positions):
             pairs.append((b1, b2, sep))
     return pairs
 
-def check_ecliptic_alignment(positions, max_ecliptic_sep):
-    """
-    Checks if the maximum pairwise separation in ecliptic coordinates
-    is <= max_ecliptic_sep.
-    """
-    separations = calculate_ecliptic_separations(positions)
-    # The largest separation among all pairs:
-    largest_sep = max(s[2] for s in separations)
-    return largest_sep <= max_ecliptic_sep
+
+def check_ecliptic_alignment(positions, max_sep, method):
+    if method == "pairwise":
+        separations = calculate_ecliptic_separations(positions)
+        return max(s[2] for s in separations) <= max_sep
+    elif method == "longitude":
+        longitudes = [pos["lon"] % 360 for pos in positions.values()]
+        lon_range = max(longitudes) - min(longitudes)
+        return min(lon_range, 360 - lon_range) <= max_sep
+
 
 def get_horizontal_positions(bodies, date, location):
-    """
-    Helper to create alt/az positions for plotting in a local sky plot.
-    """
     time = Time(date)
     solar_system_ephemeris.set("de432s")
-
     altaz_positions = {}
-    frame = EarthLocation(lat=location.lat, lon=location.lon).get_itrs(obstime=time)
-    from astropy.coordinates import AltAz
-
     altaz_frame = AltAz(obstime=time, location=location)
-
     for body in bodies:
         coord = get_body(body, time)
         altaz = coord.transform_to(altaz_frame)
@@ -115,13 +139,9 @@ def get_horizontal_positions(bodies, date, location):
         }
     return altaz_positions
 
+
 def create_sky_plot(positions):
-    """
-    Creates a polar plot (Plotly) for alt-az positions of selected bodies.
-    positions = { body_name: {"alt": float, "az": float} }
-    """
     fig = go.Figure()
-    # A simple color map if desired:
     color_map = {
         "mercury": "gray",
         "venus": "yellow",
@@ -132,13 +152,12 @@ def create_sky_plot(positions):
         "neptune": "blue",
         "moon": "white",
     }
-
     for body, pos in positions.items():
         label = body.capitalize()
         fig.add_trace(
             go.Scatterpolar(
-                r=[90 - pos["alt"]],  # altitude -> distance from the zenith
-                theta=[pos["az"]],  # azimuth
+                r=[90 - pos["alt"]],
+                theta=[pos["az"]],
                 mode="markers+text",
                 text=[label],
                 textposition="top center",
@@ -146,7 +165,6 @@ def create_sky_plot(positions):
                 marker=dict(size=10, color=color_map.get(body, "white")),
             )
         )
-
     fig.update_layout(
         polar=dict(
             radialaxis=dict(range=[0, 90], ticksuffix="°"),
@@ -155,113 +173,165 @@ def create_sky_plot(positions):
         showlegend=True,
         title="Local Sky Positions (Alt-Az)",
     )
-
     return fig
 
-# New helper function for parallel checking of alignment on a given date.
-def check_alignment_for_date(date, bodies, max_sep):
-    """
-    Returns (date, is_aligned, eclip_positions).
-    """
+
+def check_alignment_for_date(
+    date, bodies, max_sep, method, check_vis, location, min_alt
+):
     eclip_positions = get_ecliptic_positions(bodies, date)
-    is_aligned = check_ecliptic_alignment(eclip_positions, max_sep)
+    is_aligned = check_ecliptic_alignment(eclip_positions, max_sep, method)
+
+    if check_vis and is_aligned:
+        altaz = get_horizontal_positions(bodies, date, location)
+        visible = all(pos["alt"] >= min_alt for pos in altaz.values())
+        return (date, is_aligned and visible, eclip_positions)
+
     return (date, is_aligned, eclip_positions)
 
+
 def main():
-    st.set_page_config(page_title="Planetary Alignment", page_icon="💫", layout="wide")
-    st.title("💫 Planetary (and Moon) Alignment")
+    lang_code = "en"
+    st.set_page_config(
+        page_title=TRANSLATIONS[lang_code]["title"], page_icon="💫", layout="wide"
+    )
+
+    lang = st.sidebar.selectbox("Language/Idioma", ["English", "Português"])
+    lang_code = "en" if lang == "English" else "pt"
+
+    st.title("💫" + TRANSLATIONS[lang_code]["title"])
 
     # --- Sidebar Controls ---
-    st.sidebar.header(":material/settings: Configuration")
+    st.sidebar.header(f":material/settings: {TRANSLATIONS[lang_code]['settings']}")
 
-    # 1) Select which bodies to consider:
-    st.sidebar.subheader("💫 Which objects do you want to check for alignment?")
+    st.sidebar.subheader(f"⭐️ {TRANSLATIONS[lang_code]['select_bodies']}")
     available_bodies = list(BODY_MAP.keys())
     selected_bodies = st.sidebar.multiselect(
-        "Select bodies",
+        TRANSLATIONS[lang_code]["select"],
         available_bodies,
-        default=[
-            "Mercury",
-            "Venus",
-            "Mars",
-            "Jupiter",
-            "Saturn",
-            "Moon",
-        ],  # Default selection
+        default=["mercury", "venus", "mars", "jupiter", "saturn", "moon"],
     )
     if not selected_bodies:
-        st.warning("No bodies selected. Please select at least one.")
+        st.warning(TRANSLATIONS[lang_code]["bodies_warning"])
         return
 
-    # 2) Ecliptic alignment threshold:
-    st.sidebar.subheader(":telescope: Alignment Threshold (Ecliptic)")
-    max_ecliptic_sep = st.sidebar.slider(
-        "Max pairwise separation (degrees)",
-        min_value=0.0,
-        max_value=30.0,
-        value=10.0,
-        step=0.5,
-        help="Maximum angular separation in ecliptic coords to consider 'aligned'.",
+    st.sidebar.subheader(f":telescope: {TRANSLATIONS[lang_code]['alignment_method']}")
+    alignment_method = st.sidebar.radio(
+        "",
+        [
+            TRANSLATIONS[lang_code]["pairwise_separation"],
+            TRANSLATIONS[lang_code]["longitude_range"],
+        ],
+        index=0,
+    )
+    method = (
+        "pairwise"
+        if alignment_method == TRANSLATIONS[lang_code]["pairwise_separation"]
+        else "longitude"
     )
 
-    # 3) Location
-    st.sidebar.subheader(":earth_americas: Observer Location")
-    lat = st.sidebar.number_input("Latitude (degrees)", value=-15.7942, format="%0.4f")
-    lon = st.sidebar.number_input("Longitude (degrees)", value=-47.8823, format="%0.4f")
+    max_sep = st.sidebar.slider(
+        TRANSLATIONS[lang_code]["alignment_threshold"],
+        min_value=5.0,
+        max_value=45.0,
+        value=20.0,
+        step=0.5,
+    )
+
+    st.sidebar.subheader(f":earth_americas: {TRANSLATIONS[lang_code]['location']}")
+    lat = st.sidebar.number_input(
+        TRANSLATIONS[lang_code]["latitude"], value=-15.7942, format="%0.4f"
+    )
+    lon = st.sidebar.number_input(
+        TRANSLATIONS[lang_code]["longitude"], value=-47.8823, format="%0.4f"
+    )
     location = EarthLocation(lat=lat * u.deg, lon=lon * u.deg)
 
-    # 4) Date range
-    st.sidebar.subheader(":calendar: Date Range to Search")
-    start_date = st.sidebar.date_input("Start date", value=datetime.now().date())
+    st.sidebar.subheader(f":calendar: {TRANSLATIONS[lang_code]['date_range']}")
+    start_date = st.sidebar.date_input(
+        TRANSLATIONS[lang_code]["start_date"], value=datetime.now().date()
+    )
     end_year = st.sidebar.number_input(
-        "End year", min_value=start_date.year, max_value=2100, value=start_date.year + 1
+        TRANSLATIONS[lang_code]["end_year"],
+        min_value=start_date.year,
+        max_value=start_date.year + 5,
+        value=start_date.year + 1,
     )
 
-    # We fix the month/day to be the same as start_date for the end date
-    try:
-        end_datetime = datetime(end_year, start_date.month, start_date.day)
-    except ValueError:
-        end_datetime = datetime(end_year, start_date.month, min(start_date.day, 28))
+    step_hours = st.sidebar.slider(
+        TRANSLATIONS[lang_code]["step_size_hours"],
+        min_value=1,
+        max_value=24,
+        value=6,
+        help="Smaller steps increase accuracy but take longer to compute",
+    )
 
-    start_datetime = datetime.combine(start_date, datetime.min.time())
-    step_days = st.sidebar.slider("Step size (days)", 1, 30, 1)
+    check_vis = st.sidebar.checkbox(
+        TRANSLATIONS[lang_code]["check_visibility"], value=True
+    )
+    min_alt = (
+        st.sidebar.slider(
+            TRANSLATIONS[lang_code]["min_altitude"],
+            min_value=-20,
+            max_value=30,
+            value=0,
+            step=5,
+        )
+        if check_vis
+        else 0
+    )
 
-    # --- Search Button ---
-    if st.button("Search for Alignment"):
+    if st.button(TRANSLATIONS[lang_code]["search_button"]):
         with st.spinner("Searching..."):
             found_alignment = False
-            # Create a list of all the dates we will check
             all_dates = []
-            current_date = start_datetime
-            while current_date <= end_datetime:
-                all_dates.append(current_date)
-                current_date += timedelta(days=step_days)
+            current_date = datetime.combine(start_date, datetime.min.time())
 
-            # Convert user-chosen bodies to the actual strings used by get_body
+            try:
+                end_date = datetime(end_year, start_date.month, start_date.day)
+            except ValueError:
+                end_date = datetime(end_year, start_date.month, 28)
+
+            while current_date <= end_date:
+                all_dates.append(current_date)
+                current_date += timedelta(hours=step_hours)
+
             api_bodies = [BODY_MAP[b] for b in selected_bodies]
 
-            # Parallel check each date for alignment
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                results = list(
-                    executor.map(
-                        lambda dt: check_alignment_for_date(dt, api_bodies, max_ecliptic_sep),
-                        all_dates
+                futures = [
+                    executor.submit(
+                        check_alignment_for_date,
+                        dt,
+                        api_bodies,
+                        max_sep,
+                        method,
+                        check_vis,
+                        location,
+                        min_alt,
                     )
-                )
+                    for dt in all_dates
+                ]
 
-            # Now find the earliest date that is aligned
-            for (date_checked, is_aligned, ecl_positions) in results:
-                if is_aligned:
-                    found_alignment = True
-                    st.success(f"Alignment found: {date_checked.strftime('%Y-%m-%d %H:%M')}")
-                    # For visualization: get alt/az on that date
-                    altaz_positions = get_horizontal_positions(api_bodies, date_checked, location)
-                    fig = create_sky_plot(altaz_positions)
-                    st.plotly_chart(fig)
-                    break  # Stop as soon as we find the first alignment
+                for future in concurrent.futures.as_completed(futures):
+                    date_checked, is_aligned, ecl_positions = future.result()
+                    if is_aligned and not found_alignment:
+                        found_alignment = True
+                        st.success(
+                            TRANSLATIONS[lang_code]["alignment_found"].format(
+                                date_checked.strftime("%Y-%m-%d %H:%M")
+                            )
+                        )
+                        altaz_positions = get_horizontal_positions(
+                            api_bodies, date_checked, location
+                        )
+                        fig = create_sky_plot(altaz_positions)
+                        st.plotly_chart(fig)
+                        break
 
             if not found_alignment:
-                st.error("No alignment found within the specified date range.")
+                st.error(TRANSLATIONS[lang_code]["no_alignment_found"])
+
 
 if __name__ == "__main__":
     main()
