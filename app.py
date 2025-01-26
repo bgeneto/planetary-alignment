@@ -35,7 +35,7 @@ def get_ecliptic_positions(bodies, date):
     """
     time = Time(date)
     # we can use a JPL ephemeris that includes outer planets
-    solar_system_ephemeris.set('built-in')  # Em vez de 'de432s'
+    solar_system_ephemeris.set('de432s')  # Em vez de 'de432s'
 
     ecliptic_positions = {}
     for body in bodies:
