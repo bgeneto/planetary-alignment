@@ -1,4 +1,3 @@
-
 import numpy as np
 from astropy.time import Time
 from astropy.coordinates import (
@@ -35,7 +34,7 @@ def get_ecliptic_positions(bodies, date):
     Returns a dict: { body_name: {"lon": <float>, "lat": <float>} }
     """
     time = Time(date)
-    # Make sure we use a JPL ephemeris that includes outer planets
+    # we can use a JPL ephemeris that includes outer planets
     solar_system_ephemeris.set('built-in')  # Em vez de 'de432s'
 
     ecliptic_positions = {}
