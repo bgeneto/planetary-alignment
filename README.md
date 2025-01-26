@@ -156,6 +156,5 @@ def check_alignment_for_date(...):
 ---
 
 **License**: MIT Open Source  
-**Contact**: astronomy-toolkit@example.com  
-**Version**: 1.2 (2024-03-20)
+**Version**: 1.2 (2025-01-26)
 ```
