@@ -50,7 +50,6 @@ TRANSLATIONS = {
         "local_sky_positions": "Local Sky Positions (Alt-Az)",
         "bodies_warning": "Please select at least one celestial body to check for alignment.",
         "app_description": (
-            "App Description: Planetary Alignment - Combating Misinformation\n\n"
             "The 'Planetary Alignment' app was developed with the goal of debunking misconceptions about the rarity of planetary alignments, "
             "which often circulate in the media and on social networks. Using Python and Streamlit, this tool calculates the dates when at least five planets "
             "in the Solar System can be observed aligned in the sky with the naked eye, providing accurate and accessible data to the public.\n\n"
@@ -87,7 +86,6 @@ TRANSLATIONS = {
         "local_sky_positions": "Posições no Céu Local (Alt-Az)",
         "bodies_warning": "Nenhum corpo selecionado. Por favor, selecione pelo menos um.",
         "app_description": (
-            "Descrição do Aplicativo: Alinhamento Planetário - Combatendo a Desinformação\n\n"
             "O aplicativo 'Alinhamento Planetário' foi desenvolvido com o objetivo de desmistificar informações equivocadas sobre a raridade dos alinhamentos planetários, "
             "que frequentemente circulam na mídia e nas redes sociais. Utilizando Python e Streamlit, a ferramenta permite calcular as datas em que pelo menos cinco planetas "
             "do Sistema Solar podem ser observados alinhados a olho nu no céu, oferecendo dados precisos e acessíveis para o público.\n\n"
