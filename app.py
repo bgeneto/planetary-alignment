@@ -49,6 +49,18 @@ TRANSLATIONS = {
         "alignment_found": "Alignment found: {}",
         "local_sky_positions": "Local Sky Positions (Alt-Az)",
         "bodies_warning": "Please select at least one celestial body to check for alignment.",
+        "app_description": (
+            "App Description: Planetary Alignment - Combating Misinformation\n\n"
+            "The 'Planetary Alignment' app was developed with the goal of debunking misconceptions about the rarity of planetary alignments, "
+            "which often circulate in the media and on social networks. Using Python and Streamlit, this tool calculates the dates when at least five planets "
+            "in the Solar System can be observed aligned in the sky with the naked eye, providing accurate and accessible data to the public.\n\n"
+            "Sensationalist reports frequently claim that these events are extremely rare, occurring only once every thousands of years, which is not true. "
+            "This app aims to combat such misinformation by offering a scientific and transparent approach, based on reliable astronomical calculations. "
+            "It allows anyone to explore and understand the actual frequency of these phenomena, promoting critical thinking and the dissemination of accurate information.\n\n"
+            "With an intuitive and interactive interface, the app is ideal for both astronomy enthusiasts and educators or science communicators who want to debunk myths "
+            "and share well-founded knowledge. By democratizing access to astronomical data, the 'Planetary Alignment' app contributes to a more accurate understanding of the cosmos "
+            "and reinforces the importance of questioning and verifying information before sharing it."
+        ),
     },
     "pt": {
         "title": "Alinhamento Planetário",
@@ -74,6 +86,18 @@ TRANSLATIONS = {
         "alignment_found": "Alinhamento encontrado: {}",
         "local_sky_positions": "Posições no Céu Local (Alt-Az)",
         "bodies_warning": "Nenhum corpo selecionado. Por favor, selecione pelo menos um.",
+        "app_description": (
+            "Descrição do Aplicativo: Alinhamento Planetário - Combatendo a Desinformação\n\n"
+            "O aplicativo 'Alinhamento Planetário' foi desenvolvido com o objetivo de desmistificar informações equivocadas sobre a raridade dos alinhamentos planetários, "
+            "que frequentemente circulam na mídia e nas redes sociais. Utilizando Python e Streamlit, a ferramenta permite calcular as datas em que pelo menos cinco planetas "
+            "do Sistema Solar podem ser observados alinhados a olho nu no céu, oferecendo dados precisos e acessíveis para o público.\n\n"
+            "Muitas vezes, reportagens sensacionalistas afirmam que esses eventos são extremamente raros, ocorrendo apenas a cada milhares de anos, o que não é verdade. "
+            "Este aplicativo busca combater essa desinformação ao fornecer uma abordagem científica e transparente, baseada em cálculos astronômicos confiáveis. "
+            "Ele permite que qualquer pessoa explore e compreenda a frequência real desses fenômenos, promovendo o pensamento crítico e a disseminação de informações corretas.\n\n"
+            "Com uma interface intuitiva e interativa, o aplicativo é ideal tanto para entusiastas da astronomia quanto para educadores e comunicadores científicos que desejam esclarecer mitos "
+            "e compartilhar conhecimento fundamentado. Ao democratizar o acesso a dados astronômicos, o 'Alinhamento Planetário' contribui para uma compreensão mais precisa do cosmos "
+            "e reforça a importância de questionar e verificar informações antes de compartilhá-las."
+        ),
     },
 }
 
@@ -201,6 +225,8 @@ def main():
 
     st.title("💫" + TRANSLATIONS[lang_code]["title"])
 
+    st.write(TRANSLATIONS[lang_code]["app_description"])
+    
     # --- Sidebar Controls ---
     st.sidebar.header(f":material/settings: {TRANSLATIONS[lang_code]['settings']}")
 
